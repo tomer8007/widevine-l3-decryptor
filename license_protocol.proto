@@ -1,0 +1,549 @@
+// ----------------------------------------------------------------------------
+// license_protocol.proto
+// ----------------------------------------------------------------------------
+// Copyright 2013 Google Inc. All Rights Reserved.
+//
+// Description:
+//   Definitions of the protocol buffer messages used in the Widevine license
+//   exchange protocol.
+
+syntax = "proto2";
+
+package video_widevine_server.sdk;
+
+// need this if we are using libprotobuf-cpp-2.3.0-lite
+option optimize_for = LITE_RUNTIME;
+
+enum LicenseType {
+  STREAMING = 1;
+  OFFLINE = 2;
+}
+
+// LicenseIdentification is propagated from LicenseRequest to License,
+// incrementing version with each iteration.
+message LicenseIdentification {
+  optional bytes request_id = 1;
+  optional bytes session_id = 2;
+  optional bytes purchase_id = 3;
+  optional LicenseType type = 4;
+  optional int32 version = 5;
+  optional bytes provider_session_token = 6;
+}
+
+message License {
+  message Policy {
+    // Indicates that playback of the content is allowed.
+    optional bool can_play = 1 [default = false];
+
+    // Indicates that the license may be persisted to non-volatile
+    // storage for offline use.
+    optional bool can_persist = 2 [default = false];
+
+    // Indicates that renewal of this license is allowed.
+    optional bool can_renew = 3 [default = false];
+
+    // For the |*duration*| fields, playback must halt when
+    // license_start_time (seconds since the epoch (UTC)) +
+    // license_duration_seconds is exceeded. A value of 0
+    // indicates that there is no limit to the duration.
+
+    // Indicates the rental window.
+    optional int64 rental_duration_seconds = 4 [default = 0];
+
+    // Indicates the viewing window, once playback has begun.
+    optional int64 playback_duration_seconds = 5 [default = 0];
+
+    // Indicates the time window for this specific license.
+    optional int64 license_duration_seconds = 6 [default = 0];
+
+    // The |renewal*| fields only apply if |can_renew| is true.
+
+    // The window of time, in which playback is allowed to continue while
+    // renewal is attempted, yet unsuccessful due to backend problems with
+    // the license server.
+    optional int64 renewal_recovery_duration_seconds = 7 [default = 0];
+
+    // All renewal requests for this license shall be directed to the
+    // specified URL.
+    optional string renewal_server_url = 8;
+
+    // How many seconds after license_start_time, before renewal is first
+    // attempted.
+    optional int64 renewal_delay_seconds = 9 [default = 0];
+
+    // Specifies the delay in seconds between subsequent license
+    // renewal requests, in case of failure.
+    optional int64 renewal_retry_interval_seconds = 10 [default = 0];
+
+    // Indicates that the license shall be sent for renewal when usage is
+    // started.
+    optional bool renew_with_usage = 11 [default = false];
+
+    // Indicates to client that license renewal and release requests ought to
+    // include ClientIdentification (client_id).
+    optional bool renew_with_client_id = 12 [default = false];
+  }
+
+  message KeyContainer {
+    enum KeyType {
+      // Exactly one key of this type must appear.
+      SIGNING = 1;
+      CONTENT = 2;
+      KEY_CONTROL = 3;
+      OPERATOR_SESSION = 4;
+    }
+
+    // The SecurityLevel enumeration allows the server to communicate the level
+    // of robustness required by the client, in order to use the key.
+    enum SecurityLevel {
+      // Software-based whitebox crypto is required.
+      SW_SECURE_CRYPTO = 1;
+
+      // Software crypto and an obfuscated decoder is required.
+      SW_SECURE_DECODE = 2;
+
+      // The key material and crypto operations must be performed within a
+      // hardware backed trusted execution environment.
+      HW_SECURE_CRYPTO = 3;
+
+      // The crypto and decoding of content must be performed within a hardware
+      // backed trusted execution environment.
+      HW_SECURE_DECODE = 4;
+
+      // The crypto, decoding and all handling of the media (compressed and
+      // uncompressed) must be handled within a hardware backed trusted
+      // execution environment.
+      HW_SECURE_ALL = 5;
+    }
+
+    message KeyControl {
+      // If present, the key control must be communicated to the secure
+      // environment prior to any usage. This message is automatically generated
+      // by the Widevine License Server SDK.
+      optional bytes key_control_block = 1;
+      optional bytes iv = 2;
+    }
+
+    message OutputProtection {
+      // Indicates whether HDCP is required on digital outputs, and which
+      // version should be used.
+      enum HDCP {
+        HDCP_NONE = 0;
+        HDCP_V1 = 1;
+        HDCP_V2 = 2;
+        HDCP_V2_1 = 3;
+        HDCP_V2_2 = 4;
+        HDCP_NO_DIGITAL_OUTPUT = 0xff;
+      }
+      optional HDCP hdcp = 1 [default = HDCP_NONE];
+
+      // Indicate the CGMS setting to be inserted on analog output.
+      enum CGMS {
+        CGMS_NONE = 42;
+        COPY_FREE = 0;
+        COPY_ONCE = 2;
+        COPY_NEVER = 3;
+      }
+      optional CGMS cgms_flags = 2 [default = CGMS_NONE];
+    }
+
+    message VideoResolutionConstraint {
+      // Minimum and maximum video resolutions in the range (height x width).
+      optional uint32 min_resolution_pixels = 1;
+      optional uint32 max_resolution_pixels = 2;
+      // Optional output protection requirements for this range. If not
+      // specified, the OutputProtection in the KeyContainer applies.
+      optional OutputProtection required_protection = 3;
+    }
+
+    message OperatorSessionKeyPermissions {
+      // Permissions/key usage flags for operator service keys
+      // (type = OPERATOR_SESSION).
+      optional bool allow_encrypt = 1 [default = false];
+      optional bool allow_decrypt = 2 [default = false];
+      optional bool allow_sign = 3 [default = false];
+      optional bool allow_signature_verify = 4 [default = false];
+    }
+
+    optional bytes id = 1;
+    optional bytes iv = 2;
+    optional bytes key = 3;
+    optional KeyType type = 4;
+    optional SecurityLevel level = 5 [default = SW_SECURE_CRYPTO];
+    optional OutputProtection required_protection = 6;
+    // NOTE: Use of requested_protection is not recommended as it is only
+    // supported on a small number of platforms.
+    optional OutputProtection requested_protection = 7;
+    optional KeyControl key_control = 8;
+    optional OperatorSessionKeyPermissions operator_session_key_permissions = 9;
+    // Optional video resolution constraints. If the video resolution of the
+    // content being decrypted/decoded falls within one of the specified ranges,
+    // the optional required_protections may be applied. Otherwise an error will
+    // be reported.
+    // NOTE: Use of this feature is not recommended, as it is only supported on
+    // a small number of platforms.
+    repeated VideoResolutionConstraint video_resolution_constraints = 10;
+    // Optional flag to indicate the key must only be used if the client
+    // supports anti rollback of the user table.  Content provider can query the
+    // client capabilities to determine if the client support this feature.
+    optional bool anti_rollback_usage_table = 11 [default = false];
+  }
+
+  optional LicenseIdentification id = 1;
+  optional Policy policy = 2;
+  repeated KeyContainer key = 3;
+  optional int64 license_start_time = 4;
+  optional bool remote_attestation_verified = 5 [default = false];
+  // Client token generated by the content provider. Optional.
+  optional bytes provider_client_token = 6;
+}
+
+enum ProtocolVersion {
+  VERSION_2_0 = 20;
+  VERSION_2_1 = 21;
+}
+
+message LicenseRequest {
+  message ContentIdentification {
+    message CENC  {
+      repeated bytes pssh = 1;
+      optional LicenseType license_type = 2;
+      optional bytes request_id = 3;  // Opaque, client-specified.
+    }
+
+    message WebM {
+      optional bytes header = 1;
+      optional LicenseType license_type = 2;
+      optional bytes request_id = 3;  // Opaque, client-specified.
+    }
+
+    message ExistingLicense {
+      optional LicenseIdentification license_id = 1;
+      optional int64 seconds_since_started = 2;
+      optional int64 seconds_since_last_played = 3;
+      optional bytes session_usage_table_entry = 4;
+    }
+
+    // Exactly one of these must be present.
+    optional CENC cenc_id = 1;
+    optional WebM webm_id = 2;
+    optional ExistingLicense license = 3;
+  }
+
+  enum RequestType {
+    NEW = 1;
+    RENEWAL = 2;
+    RELEASE = 3;
+  }
+
+  // The client_id provides information authenticating the calling device.  It
+  // contains the Widevine keybox token that was installed on the device at the
+  // factory.  This field or encrypted_client_id below is required for a valid
+  // license request, but both should never be present in the same request.
+  optional ClientIdentification client_id = 1;
+  optional ContentIdentification content_id = 2;
+  optional RequestType type = 3;
+  optional int64 request_time = 4;
+  // Old-style decimal-encoded string key control nonce.
+  optional bytes key_control_nonce_deprecated = 5;
+  optional ProtocolVersion protocol_version = 6 [default = VERSION_2_0];
+  // New-style uint32 key control nonce, please use instead of
+  // key_control_nonce_deprecated.
+  optional uint32 key_control_nonce = 7;
+  // Encrypted ClientIdentification message, used for privacy purposes.
+  optional EncryptedClientIdentification encrypted_client_id = 8;
+}
+
+message LicenseError {
+  enum Error {
+    // The device credentials are invalid. The device must re-provision.
+    INVALID_DEVICE_CERTIFICATE = 1;
+    // The device credentials have been revoked. Re-provisioning is not
+    // possible.
+    REVOKED_DEVICE_CERTIFICATE = 2;
+    // The service is currently unavailable due to the backend being down
+    // or similar circumstances.
+    SERVICE_UNAVAILABLE = 3;
+  }
+  optional Error error_code = 1;
+}
+
+message RemoteAttestation {
+  // Encrypted ClientIdentification message containing the device remote
+  // attestation certificate. Required.
+  optional EncryptedClientIdentification certificate = 1;
+  // Bytes of salt which were added to the remote attestation challenge prior to
+  // signing it. Required.
+  optional bytes salt = 2;
+  // Signed remote attestation challenge + salt. Required.
+  optional bytes signature = 3;
+}
+
+message SignedMessage {
+  enum MessageType {
+    LICENSE_REQUEST = 1;
+    LICENSE = 2;
+    ERROR_RESPONSE = 3;
+    SERVICE_CERTIFICATE_REQUEST = 4;
+    SERVICE_CERTIFICATE = 5;
+  }
+
+  optional MessageType type = 1;
+  optional bytes msg = 2;
+  optional bytes signature = 3;
+  optional bytes session_key = 4;
+  // Remote attestation data which will be present in the initial license
+  // request for ChromeOS client devices operating in verified mode. Remote
+  // attestation challenge data is |msg| field above. Optional.
+  optional RemoteAttestation remote_attestation = 5;
+}
+
+// ----------------------------------------------------------------------------
+// certificate_provisioning.proto
+// ----------------------------------------------------------------------------
+// Copyright 2013 Google Inc. All Rights Reserved.
+//
+// Description:
+//   Public protocol buffer definitions for Widevine Device Certificate
+//   Provisioning protocol.
+
+// ProvisioningOptions specifies the type of certificate to specify and
+// in the case of X509 certificates, the certificate authority to use.
+message ProvisioningOptions {
+  enum CertificateType {
+    WIDEVINE_DRM = 0; // Default.  The original certificate type.
+    X509 = 1; // X.509 certificate.
+  }
+
+  optional CertificateType certificate_type = 1;
+
+  // It is recommended that the certificate_authority specify the X.509
+  // Subject of the signing certificate.
+  optional string certificate_authority = 2;
+}
+
+// Provisioning request sent by client devices to provisioning service.
+message ProvisioningRequest {
+  // Device root of trust and other client identification. Required.
+  optional ClientIdentification client_id = 1;
+  // Nonce value used to prevent replay attacks. Required.
+  optional bytes nonce = 2;
+  // Options for type of certificate to generate.  Optional.
+  optional ProvisioningOptions options = 3;
+  // Stable identifier, unique for each device + application (or origin).
+  // Required if doing per-origin provisioning.
+  optional bytes stable_id = 4;
+}
+
+// Provisioning response sent by the provisioning server to client devices.
+message ProvisioningResponse {
+  // AES-128 encrypted device private RSA key. PKCS#1 ASN.1 DER-encoded.
+  // Required.
+  optional bytes device_rsa_key = 1;
+  // Initialization vector used to encrypt device_rsa_key. Required.
+  optional bytes device_rsa_key_iv = 2;
+  // Serialized SignedDeviceCertificate. Required.
+  optional bytes device_certificate = 3;
+  // Nonce value matching nonce in ProvisioningRequest. Required.
+  optional bytes nonce = 4;
+}
+
+// Serialized ProvisioningRequest or ProvisioningResponse signed with
+// The message authentication key.
+message SignedProvisioningMessage {
+  // Serialized ProvisioningRequest or ProvisioningResponse. Required.
+  optional bytes message = 1;
+  // HMAC-SHA256 signature of message. Required.
+  optional bytes signature = 2;
+}
+
+// ----------------------------------------------------------------------------
+// client_identification.proto
+// ----------------------------------------------------------------------------
+// Copyright 2013 Google Inc. All Rights Reserved.
+//
+// Description:
+//   ClientIdentification messages used by provisioning and license protocols.
+
+// ClientIdentification message used to authenticate the client device.
+message ClientIdentification {
+  enum TokenType {
+    KEYBOX = 0;
+    DEVICE_CERTIFICATE = 1;
+    REMOTE_ATTESTATION_CERTIFICATE = 2;
+  }
+
+  message NameValue {
+    optional string name = 1;
+    optional string value = 2;
+  }
+
+  // Capabilities which not all clients may support. Used for the license
+  // exchange protocol only.
+  message ClientCapabilities {
+    enum HdcpVersion {
+      HDCP_NONE = 0;
+      HDCP_V1 = 1;
+      HDCP_V2 = 2;
+      HDCP_V2_1 = 3;
+      HDCP_V2_2 = 4;
+      HDCP_NO_DIGITAL_OUTPUT = 0xff;
+    }
+
+    optional bool client_token = 1 [default = false];
+    optional bool session_token = 2 [default = false];
+    optional bool video_resolution_constraints = 3 [default = false];
+    optional HdcpVersion max_hdcp_version = 4 [default = HDCP_NONE];
+    optional uint32 oem_crypto_api_version = 5;
+    optional bool anti_rollback_usage_table = 6 [default = false];
+  }
+
+  // Type of factory-provisioned device root of trust. Optional.
+  optional TokenType type = 1 [default = KEYBOX];
+  // Factory-provisioned device root of trust. Required.
+  optional bytes token = 2;
+  // Optional client information name/value pairs.
+  repeated NameValue client_info = 3;
+  // Client token generated by the content provider. Optional.
+  optional bytes provider_client_token = 4;
+  // Number of licenses received by the client to which the token above belongs.
+  // Only present if client_token is specified.
+  optional uint32 license_counter = 5;
+  // List of non-baseline client capabilities.
+  optional ClientCapabilities client_capabilities = 6;
+}
+
+// EncryptedClientIdentification message used to hold ClientIdentification
+// messages encrypted for privacy purposes.
+message EncryptedClientIdentification {
+  // Service ID for which the ClientIdentifcation is encrypted (owner of service
+  // certificate).
+  optional string service_id = 1;
+  // Serial number for the service certificate for which ClientIdentification is
+  // encrypted.
+  optional bytes service_certificate_serial_number = 2;
+  // Serialized ClientIdentification message, encrypted with the privacy key using
+  // AES-128-CBC with PKCS#5 padding.
+  optional bytes encrypted_client_id = 3;
+  // Initialization vector needed to decrypt encrypted_client_id.
+  optional bytes encrypted_client_id_iv = 4;
+  // AES-128 privacy key, encrytped with the service public public key using
+  // RSA-OAEP.
+  optional bytes encrypted_privacy_key = 5;
+}
+
+// ----------------------------------------------------------------------------
+// device_certificate.proto
+// ----------------------------------------------------------------------------
+// Copyright 2013 Google Inc. All Rights Reserved.
+//
+// Description:
+//   Device certificate and certificate status list format definitions.
+
+// Certificate definition for user devices, intermediate, service, and root
+// certificates.
+message DeviceCertificate {
+  enum CertificateType {
+    ROOT = 0;
+    INTERMEDIATE = 1;
+    USER_DEVICE = 2;
+    SERVICE = 3;
+  }
+
+  // Type of certificate. Required.
+  optional CertificateType type = 1;
+  // 128-bit globally unique serial number of certificate.
+  // Value is 0 for root certificate. Required.
+  optional bytes serial_number = 2;
+  // POSIX time, in seconds, when the certificate was created. Required.
+  optional uint32 creation_time_seconds = 3;
+  // Device public key. PKCS#1 ASN.1 DER-encoded. Required.
+  optional bytes public_key = 4;
+  // Widevine system ID for the device. Required for intermediate and
+  // user device certificates.
+  optional uint32 system_id = 5;
+  // Deprecated field, which used to indicate whether the device was a test
+  // (non-production) device. The test_device field in ProvisionedDeviceInfo
+  // below should be observed instead.
+  optional bool test_device_deprecated = 6 [deprecated = true];
+  // Service identifier (web origin) for the service which owns the certificate.
+  // Required for service certificates.
+  optional string service_id = 7;
+}
+
+// DeviceCertificate signed with intermediate or root certificate private key.
+message SignedDeviceCertificate {
+  // Serialized DeviceCertificate. Required.
+  optional bytes device_certificate = 1;
+  // Signature of device_certificate. Signed with root or intermediate
+  // certificate private key using RSASSA-PSS. Required.
+  optional bytes signature = 2;
+  // Intermediate signing certificate. Present only for user device
+  // certificates. All others signed with root certificate private key.
+  optional SignedDeviceCertificate signer = 3;
+}
+
+// Contains device model information for a provisioned device.
+message ProvisionedDeviceInfo {
+  enum WvSecurityLevel {
+    // Defined in "WV Modular DRM Security Integration Guide for
+    // Common Encryption (CENC)"
+    LEVEL_UNSPECIFIED = 0;
+    LEVEL_1 = 1;
+    LEVEL_2 = 2;
+    LEVEL_3 = 3;
+  }
+
+  // Widevine system ID for the device. Mandatory.
+  optional uint32 system_id = 1;
+  // Name of system-on-a-chip. Optional.
+  optional string soc = 2;
+  // Name of manufacturer. Optional.
+  optional string manufacturer = 3;
+  // Manufacturer's model name. Matches "brand" in device metadata. Optional.
+  optional string model = 4;
+  // Type of device (Phone, Tablet, TV, etc).
+  optional string device_type = 5;
+  // Device model year. Optional.
+  optional uint32 model_year = 6;
+  // Widevine-defined security level. Optional.
+  optional WvSecurityLevel security_level = 7 [default = LEVEL_UNSPECIFIED];
+  // True if the certificate corresponds to a test (non production) device.
+  // Optional.
+  optional bool test_device = 8 [default = false];
+}
+
+// Contains the status of the root or an intermediate DeviceCertificate.
+message DeviceCertificateStatus {
+  enum CertificateStatus {
+    VALID = 0;
+    REVOKED = 1;
+  };
+
+  // Serial number of the DeviceCertificate to which this message refers.
+  // Required.
+  optional bytes serial_number = 1;
+  // Status of the certificate. Optional.
+  optional CertificateStatus status = 2 [default = VALID];
+  // Device model information about the device to which the certificate
+  // corresponds. Required.
+  optional ProvisionedDeviceInfo device_info = 4;
+}
+
+// List of DeviceCertificateStatus. Used to propagate certificate revocation and
+// update list.
+message DeviceCertificateStatusList {
+  // POSIX time, in seconds, when the list was created. Required.
+  optional uint32 creation_time_seconds = 1;
+  // DeviceCertificateStatus for each certifificate.
+  repeated DeviceCertificateStatus certificate_status = 2;
+}
+
+// Signed CertificateStatusList
+message SignedCertificateStatusList {
+  // Serialized DeviceCertificateStatusList. Required.
+  optional bytes certificate_status_list = 1;
+  // Signature of certificate_status_list. Signed with root certificate private
+  // key using RSASSA-PSS. Required.
+  optional bytes signature = 2;
+}

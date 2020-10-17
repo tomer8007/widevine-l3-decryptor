@@ -1,0 +1,29 @@
+{
+  "manifest_version": 2,
+  "name": "Widivine Decryptor",
+  "short_name": "WidevineDecryptor",
+   "description": "Decrypts and logs media keys from websites that use Widivine DRM",
+  "version": "1.0.0",
+  "permissions": 
+  [
+	
+  ],
+   "icons": 
+   {
+      
+   },
+   "browser_action": {
+    
+   },
+   
+   "content_scripts": 
+   [
+  	{
+  	  "matches": ["https://*/*"],
+  	  "js": ["content_script.js"],
+      "css": [],
+  	  "run_at": "document_start"
+  	}
+   ],
+	"web_accessible_resources": ["content_key_decryption.js", "eme_interception.js", "lib/*", "protobuf-generated/*"]
+}
