@@ -23,6 +23,7 @@ e.g:
 ```
 ffmpeg -decryption_key 100b6c20940f779a4589152b57d2dacb -i encrypted_media.mp4 -codec copy decrypted_media.mp4
 ```
+*NOTE*: The extension currently supports Windows only.
 
 ## How
 In the context of browsers the actual decryption of the media is usually done inside a proprietary binary (`widevinecdm.dll`, known as the Content Decryption Module or CDM) only after receiving the license from a license server with an encrypted key in it.
