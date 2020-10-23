@@ -25,6 +25,12 @@ ffmpeg -decryption_key 100b6c20940f779a4589152b57d2dacb -i encrypted_media.mp4 -
 ```
 **NOTE**: The extension currently supports the Windows platform only.
 
+If WidevineDecryptor comes back with multiple keys, the video is likely fragmented. In this case, you can decrypt it using mp4decrypt (binary found [here](https://www.bento4.com/downloads/)). The command for this would be:
+
+```
+mp4decrypt --key {kid}:{key} --key {kid}:{key} --key {kid}:{key} encrypted_media.mp4 decrypted_media.mp4
+```
+
 ## How
 In the context of browsers the actual decryption of the media is usually done inside a proprietary binary (`widevinecdm.dll`, known as the Content Decryption Module or CDM) only after receiving the license from a license server with an encrypted key in it.
 
