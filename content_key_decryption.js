@@ -166,21 +166,21 @@ function wordToByteArray(wordArray)
 // byte array to CryptoJS format
 function arrayToWordArray(u8Array) 
 {
-	var words = [], i = 0, len = u8Array.length;
+    var words = [], i = 0, len = u8Array.length;
 
-	while (i < len) {
-		words.push(
-			(u8Array[i++] << 24) |
-			(u8Array[i++] << 16) |
-			(u8Array[i++] << 8)  |
-			(u8Array[i++])
-		);
-	}
+    while (i < len) {
+        words.push(
+            (u8Array[i++] << 24) |
+            (u8Array[i++] << 16) |
+            (u8Array[i++] << 8)  |
+            (u8Array[i++])
+        );
+    }
 
-	return {
-		sigBytes: len,
-		words: words
-	};
+    return {
+        sigBytes: len,
+        words: words
+    };
 }
 
 const toHexString = bytes => bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '');
