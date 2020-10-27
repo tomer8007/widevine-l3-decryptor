@@ -21,7 +21,8 @@
       "matches": ["https://*/*"],
       "js": ["content_script.js"],
       "css": [],
-      "run_at": "document_start"
+      "run_at": "document_start",
+      "all_frames": true
     }
   ],
   "web_accessible_resources": ["content_key_decryption.js", "eme_interception.js", "lib/*", "protobuf-generated/*"]
