@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "Widivine Decryptor",
+  "name": "Widevine Decryptor",
   "short_name": "WidevineDecryptor",
-  "description": "Decrypts and logs media keys from websites that use Widivine DRM",
+  "description": "Decrypts and logs media keys from websites that use Widevine DRM",
   "version": "1.0.0",
   "permissions":
   [
