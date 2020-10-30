@@ -35,5 +35,7 @@ Some reversing job on that binary can then be done to extract the secret keys an
 ## Why
 This PoC was done to further show that code obfuscation, anti-debugging tricks, whitebox cryptography algorithms and other methods of security-by-obscurity will eventually by defeated anyway, and are, in a way, pointless.
 
+This is **NOT** intended for copyright infringement or encouraging piracy.
+
 ## Legal Disclaimer
 This is for educational purposes only. Downloading copyrighted materials from streaming services may violate their Terms of Service. **Use at your own risk.**
